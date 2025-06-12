@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page - Budget Dashboard Management</title>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="../assets/css/login.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <!-- Icon -->
+    <link rel="icon" href="../assets/icon/icon.png" type="image/png"> 
+</head>
+<body>
+    <div class="login-container">
+        <!-- Left Side - Login Form -->
+        <div class="login-form-side">
+            <div class="login-box">
+                <div class="login-logo">
+                    <b>Budget</b> Dashboard Managemet
+                </div>
+                
+                <div class="welcome-message">
+                    <h1 class="welcome-title">Welcome Back!</h1>
+                    <p class="welcome-subtitle">Please sign in to your account and start managing your budget efficiently.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body login-card-body">
+                        <p class="login-box-msg">Sign in to start your session</p>
+
+                        <form id="loginForm">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" placeholder="Username" id="username">
+                                <div class="input-group-append">
+                                    <div class="input-group-text">
+                                        <span class="fas fa-user"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-group mb-3">
+                                <input type="password" class="form-control" placeholder="Password" id="password">
+                                <div class="input-group-append">
+                                    <div class="input-group-text">
+                                        <span class="fas fa-lock"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side - Image/Illustration -->
+        <div class="login-image-side">
+            <!-- Floating Elements -->
+            <div class="floating-element"></div>
+            <div class="floating-element"></div>
+            <div class="floating-element"></div>
+            
+            <div class="image-container">
+                <div class="hero-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h2 class="hero-title">Manage Your Budget</h2>
+                <p class="hero-subtitle">Take control of your finances with our powerful budgeting tools and insights.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/js/auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

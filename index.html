@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Manajemen Budget</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="assets/css/main.css">
+
+    <script>
+        // Jika pengguna belum login, arahkan kembali ke halaman login
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'pages/login_page.html';
+        }
+    </script>
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="navbar-left">
+            <button class="hamburger-btn" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1 class="navbar-title"> Admin Dashboard </h1>
+        </div>
+        <div class="navbar-right">
+            <button class="btn btn-primary" onclick="app.downloadReportPDF()">
+                <i class="fas fa-download"></i> Export PDF
+            </button>
+            <div class="profile-dropdown">
+                <button class="profile-btn">
+                    <i class="fas fa-user"></i>
+                </button>
+                <div class="dropdown-content">
+                    <a href="#" id="logoutButton"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="assets/icon/logo.png" alt="Logo Aplikasi" class="logo-image">
+            <span class="logo-text">Budget App</span>
+        </div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="#" class="active" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="#" data-page="income">
+                    <i class="fas fa-plus-circle"></i>
+                    Pemasukkan
+                </a>
+            </li>
+            <li>
+                <a href="#" data-page="budget">
+                    <i class="fas fa-chart-pie"></i>
+                    Alokasi Budget
+                </a>
+            </li>
+            <li>
+                <a href="#" data-page="expense">
+                    <i class="fas fa-minus-circle"></i>
+                    Pengeluaran
+                </a>
+            </li>
+            <li>
+                <a href="#" data-page="history">
+                    <i class="fas fa-history"></i>
+                    Riwayat
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <div class="overlay" id="overlay"></div>
+
+    <main class="main-content" id="mainContent">
+        <div class="page active" id="dashboard">
+            <div class="content-header">
+                <h1>Selamat Datang di Dashboard Manajemen Budget</h1>
+                <p>Kelola keuangan Anda dengan mudah dan efisien</p>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon income">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div>
+                            <div class="card-title">Total Pemasukkan</div>
+                            <div class="card-value" id="totalIncome">Rp 0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon budget">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <div>
+                            <div class="card-title">Total Budget</div>
+                            <div class="card-value" id="totalBudget">Rp 0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon expense">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div>
+                            <div class="card-title">Total Pengeluaran</div>
+                            <div class="card-value" id="totalExpense">Rp 0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon balance">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div>
+                            <div class="card-title">Saldo Tersisa</div>
+                            <div class="card-value" id="remainingBalance">Rp 0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 style="margin-bottom: 1rem; color: #32325d;">Perbandingan Budget vs Pengeluaran</h3>
+                <canvas id="budgetChart" class="chart-canvas"></canvas>
+            </div>
+            
+            <div class="card">
+                <h3 style="margin-bottom: 1rem; color: #32325d;">Aktivitas Terbaru</h3>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Jenis</th>
+                                <th>Keterangan</th>
+                                <th>Tanggal</th>
+                                <th style="text-align: right;">Jumlah</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentActivitiesBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="income">
+            <div class="content-header">
+                <h1>Manajemen Pemasukkan</h1>
+                <p>Kelola data pemasukkan Anda</p>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="color: #32325d;">Daftar Pemasukkan</h3>
+                    <button class="btn btn-primary" onclick="app.showIncomeModal()">
+                        <i class="fas fa-plus"></i> Tambah Pemasukkan
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Kategori</th>
+                                <th>Jumlah</th>
+                                <th>Keterangan</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incomeTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="budget">
+            <div class="content-header">
+                <h1>Alokasi Budget</h1>
+                <p>Kelola alokasi budget untuk berbagai kategori</p>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="color: #32325d;">Daftar Alokasi Budget</h3>
+                    <button class="btn btn-primary" onclick="app.showBudgetModal()">
+                        <i class="fas fa-plus"></i> Tambah Alokasi
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Kategori</th>
+                                <th>Budget</th>
+                                <th>Terpakai</th>
+                                <th>Sisa</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="budgetTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="expense">
+            <div class="content-header">
+                <h1>Manajemen Pengeluaran</h1>
+                <p>Kelola data pengeluaran Anda</p>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="color: #32325d;">Daftar Pengeluaran</h3>
+                    <button class="btn btn-primary" onclick="app.showExpenseModal()">
+                        <i class="fas fa-plus"></i> Tambah Pengeluaran
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Alokasi Budget</th>
+                                <th>Jumlah</th>
+                                <th>Keterangan</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenseTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="history">
+           <div class="content-header">
+                <h1>Riwayat Transaksi</h1>
+                <p>Lihat riwayat semua transaksi dengan filter</p>
+            </div>
+
+            <div class="filter-container">
+                <h4 style="margin-bottom: 1rem; color: #32325d;">Filter Transaksi</h4>
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label class="form-label">Tanggal Mulai</label>
+                        <input type="date" class="form-control" id="filterStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tanggal Akhir</label>
+                        <input type="date" class="form-control" id="filterEndDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Jenis Transaksi</label>
+                        <select class="form-control" id="filterType">
+                            <option value="">Semua</option>
+                            <option value="income">Pemasukkan</option>
+                            <option value="expense">Pengeluaran</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="app.filterTransactions()">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                        <button class="btn btn-secondary" onclick="app.resetFilter()">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 1rem; color: #32325d;">Riwayat Transaksi</h3>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Jenis</th>
+                                <th>Kategori</th>
+                                <th>Jumlah</th>
+                                <th>Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer" id="footer"><p>&copy; Stevencodelab - Budget Management Dashboard . Dibuat dengan 💙</p></footer>
+
+    <div class="modal" id="incomeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Tambah Pemasukkan</h3>
+                <button class="close-btn" onclick="app.closeModal('incomeModal')">&times;</button>
+            </div>
+            <form id="incomeForm">
+                <div class="form-group">
+                    <label class="form-label">Tanggal</label>
+                    <input type="date" class="form-control" id="incomeDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kategori</label>
+                    <input type="text" class="form-control" id="incomeCategory" placeholder="Contoh: Gaji, Bonus, Investasi" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Jumlah</label>
+                    <input type="number" class="form-control" id="incomeAmount" placeholder="0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Keterangan</label>
+                    <textarea class="form-control" id="incomeDescription" rows="3" placeholder="Keterangan opsional"></textarea>
+                </div>
+                <div style="text-align: right; margin-top: 1rem;">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeModal('incomeModal')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="budgetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Tambah Alokasi Budget</h3>
+                <button class="close-btn" onclick="app.closeModal('budgetModal')">&times;</button>
+            </div>
+            <form id="budgetForm">
+                <div class="form-group">
+                    <label class="form-label">Nama Kategori</label>
+                    <input type="text" class="form-control" id="budgetName" placeholder="Contoh: Makanan, Transport, Hiburan" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Jumlah Budget</label>
+                    <input type="number" class="form-control" id="budgetAmount" placeholder="0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Keterangan</label>
+                    <textarea class="form-control" id="budgetDescription" rows="3" placeholder="Keterangan opsional"></textarea>
+                </div>
+                <div style="text-align: right; margin-top: 1rem;">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeModal('budgetModal')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="expenseModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Tambah Pengeluaran</h3>
+                <button class="close-btn" onclick="app.closeModal('expenseModal')">&times;</button>
+            </div>
+            <form id="expenseForm">
+                <div class="form-group">
+                    <label class="form-label">Tanggal</label>
+                    <input type="date" class="form-control" id="expenseDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Alokasi Budget</label>
+                    <select class="form-control" id="expenseBudgetAllocation" required>
+                        <option value="">Pilih Alokasi Budget</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Jumlah</label>
+                    <input type="number" class="form-control" id="expenseAmount" placeholder="0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Keterangan</label>
+                    <textarea class="form-control" id="expenseDescription" rows="3" placeholder="Keterangan opsional"></textarea>
+                </div>
+                <div style="text-align: right; margin-top: 1rem;">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeModal('expenseModal')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="assets/js/main.js"></script>
+    <script>
+        document.getElementById('logoutButton').addEventListener('click', function(e) {
+            e.preventDefault();
+            // Hapus status login dari localStorage
+            localStorage.removeItem('isLoggedIn');
+            // Arahkan ke halaman login
+            window.location.href = 'pages/login_page.html';
+        });
+    </script>
+</body>
+</html>
