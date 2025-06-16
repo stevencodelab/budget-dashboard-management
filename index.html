@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Manajemen Budget</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
     <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/user-handler.css">
 
     <script>
         // Jika pengguna belum login, arahkan kembali ke halaman login
@@ -23,18 +26,21 @@
             <button class="hamburger-btn" id="sidebarToggle">
                 <i class="fas fa-bars"></i>
             </button>
-            <h1 class="navbar-title"> Admin Dashboard </h1>
+            <h1 class="navbar-title"><span id="navbarGreeting"></span></h1>
         </div>
         <div class="navbar-right">
-            <button class="btn btn-primary" onclick="app.downloadReportPDF()">
-                <i class="fas fa-download"></i> Export PDF
-            </button>
             <div class="profile-dropdown">
-                <button class="profile-btn">
+                <span id="navbarUsername" class="navbar-username">
                     <i class="fas fa-user"></i>
-                </button>
+                    Username
+                </span>
                 <div class="dropdown-content">
-                    <a href="#" id="logoutButton"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <a href="#" onclick="app.downloadReportPDF()">
+                        <i class="fas fa-download"></i> Export PDF
+                    </a>
+                    <a href="#" id="logoutButton">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
                 </div>
             </div>
         </div>
@@ -405,7 +411,10 @@
         </div>
     </div>
 
+    <!-- Main Scripts -->
     <script src="assets/js/main.js"></script>
+    <script src="assets/js/user-handler.js"></script>
+    <script src="assets/js/alert-handler.js"></script>
     <script>
         document.getElementById('logoutButton').addEventListener('click', function(e) {
             e.preventDefault();
@@ -415,5 +424,6 @@
             window.location.href = 'pages/login_page.html';
         });
     </script>
+    
 </body>
 </html>
