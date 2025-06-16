@@ -1,7 +1,4 @@
-// auth.js - Sistem Autentikasi Lengkap dengan Fitur Ganti Kata Sandi
-
-// Pastikan SweetAlert2 dimuat di halaman login_page.html jika ingin menggunakan Swal.fire
-// <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+// auth.js - Sistem Autentikasi Lengkap dengan Fitur Ganti Username dan Kata Sandi (DIPERBAIKI)
 
 class AuthSystem {
     constructor() {
@@ -16,10 +13,8 @@ class AuthSystem {
         this.createDefaultUser();
     }
 
-    // Memuat pengguna dari memori (karena localStorage tidak didukung di beberapa lingkungan/untuk demo ini)
+    // Memuat pengguna dari memori
     loadUsers() {
-        // Pengguna default - dalam produksi, ini akan berasal dari database atau penyimpanan yang aman
-        // Untuk demo ini, kita akan menggunakan set yang di-hardcode atau memuat dari localStorage jika tersedia
         let storedUsers = {};
         try {
             storedUsers = JSON.parse(localStorage.getItem('budgetProUsers')) || {};
@@ -32,6 +27,7 @@ class AuthSystem {
             return {
                 'admin': {
                     username: 'admin',
+                    displayName: 'Admin',
                     password: 'admin123',
                     email: 'admin@budgetdashboard.com',
                     role: 'administrator',
@@ -40,6 +36,7 @@ class AuthSystem {
                 },
                 'user': {
                     username: 'user',
+                    displayName: 'User',
                     password: 'user123',
                     email: 'user@budgetdashboard.com',
                     role: 'user',
@@ -54,6 +51,7 @@ class AuthSystem {
     saveUsers() {
         try {
             localStorage.setItem('budgetProUsers', JSON.stringify(this.users));
+            console.log('Users berhasil disimpan ke localStorage:', this.users);
         } catch (e) {
             console.error("Gagal menyimpan pengguna ke localStorage:", e);
         }
@@ -61,9 +59,10 @@ class AuthSystem {
 
     // Membuat pengguna default jika belum ada
     createDefaultUser() {
-        if (!this.users['admin']) { // Memastikan admin ada
+        if (!this.users['admin']) {
             this.users['admin'] = {
                 username: 'admin',
+                displayName: 'Admin',
                 password: 'admin123',
                 email: 'admin@budgetdashboard.com',
                 role: 'administrator',
@@ -81,11 +80,9 @@ class AuthSystem {
             loginForm.addEventListener('submit', (e) => this.handleLogin(e));
         }
         
-        // Menambahkan tautan ganti kata sandi hanya jika di halaman login
         if (window.location.pathname.includes('login_page.html')) {
-            this.addChangePasswordLink();
+            this.addCredentialManagementLinks();
             
-            // Menangani tombol Enter di bidang kata sandi di halaman login
             const passwordField = document.getElementById('password');
             if (passwordField) {
                 passwordField.addEventListener('keypress', (e) => {
@@ -98,27 +95,37 @@ class AuthSystem {
         }
     }
 
-    // Menambahkan fungsionalitas ganti kata sandi
-    addChangePasswordLink() {
+    // Menambahkan tautan manajemen kredensial
+    addCredentialManagementLinks() {
         const loginBox = document.querySelector('.login-box');
-        if (loginBox && !document.getElementById('changePasswordLink')) {
-            const changePasswordHTML = `
-                <div style="margin-top: 20px; text-align: center;">
-                    <a href="#" id="changePasswordLink" style="color: #667eea; text-decoration: none; font-size: 14px; opacity: 0.8; transition: opacity 0.3s ease;">
-                        <i class="fas fa-key"></i> Ganti Kata Sandi
-                    </a>
+        if (loginBox && !document.getElementById('credentialLinks')) {
+            const credentialLinksHTML = `
+                <div id="credentialLinks" style="margin-top: 20px; text-align: center;">
+                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 10px;">
+                        <a href="#" id="changePasswordLink" style="color: #667eea; text-decoration: none; font-size: 14px; opacity: 0.8; transition: opacity 0.3s ease;">
+                            <i class="fas fa-key"></i> Ganti Password
+                        </a>
+                        <a href="#" id="changeUsernameLink" style="color: #667eea; text-decoration: none; font-size: 14px; opacity: 0.8; transition: opacity 0.3s ease;">
+                            <i class="fas fa-user-edit"></i> Ganti Username
+                        </a>
+                    </div>
                 </div>
             `;
-            loginBox.insertAdjacentHTML('beforeend', changePasswordHTML);
+            loginBox.insertAdjacentHTML('beforeend', credentialLinksHTML);
             
             document.getElementById('changePasswordLink').addEventListener('click', (e) => {
                 e.preventDefault();
                 this.showChangePasswordModal();
             });
+
+            document.getElementById('changeUsernameLink').addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showChangeUsernameModal();
+            });
         }
     }
 
-    // Menangani proses login
+    // PERBAIKAN: Menangani proses login dengan pencarian yang lebih robust
     async handleLogin(e) {
         e.preventDefault();
         
@@ -139,19 +146,24 @@ class AuthSystem {
             // Simulasi penundaan panggilan API
             await this.delay(1000);
 
-            // Otentikasi pengguna
-            const user = this.authenticate(username, password);
+            // PERBAIKAN: Reload users dari localStorage untuk memastikan data terbaru
+            this.users = this.loadUsers();
+
+            // Otentikasi pengguna dengan pencarian yang lebih robust
+            const user = this.authenticateUser(username, password);
             
             if (user) {
                 // Perbarui login terakhir
                 user.lastLogin = new Date().toISOString();
                 this.currentUser = user;
-                this.saveUsers(); // Simpan data pengguna yang diperbarui
+                this.saveUsers();
 
-                localStorage.setItem('isLoggedIn', 'true'); // Set status login
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('currentUsername', user.displayName || user.username);
+                localStorage.setItem('currentUserLogin', user.username);
                 
                 // Umpan balik sukses
-                this.showAlert('success', `Selamat datang kembali, ${user.username}!`);
+                this.showAlert('success', `Selamat datang kembali, ${user.displayName || user.username}!`);
                 
                 // Arahkan setelah penundaan singkat
                 setTimeout(() => {
@@ -170,18 +182,44 @@ class AuthSystem {
         }
     }
 
-    // Mengotentikasi pengguna
-    authenticate(username, password) {
-        const user = this.users[username.toLowerCase()];
+    // PERBAIKAN: Fungsi autentikasi yang lebih robust
+    authenticateUser(inputUsername, password) {
+        console.log('Mencoba login dengan username:', inputUsername);
+        console.log('Data users saat ini:', this.users);
+        
+        // Cari user berdasarkan username (key dalam object users)
+        const userKey = inputUsername.toLowerCase();
+        let user = this.users[userKey];
+        
+        // Jika tidak ditemukan dengan key langsung, cari berdasarkan field username
+        if (!user) {
+            user = Object.values(this.users).find(u => 
+                u.username.toLowerCase() === inputUsername.toLowerCase()
+            );
+        }
+        
+        // Jika masih tidak ditemukan, cari berdasarkan displayName
+        if (!user) {
+            user = Object.values(this.users).find(u => 
+                u.displayName && u.displayName.toLowerCase() === inputUsername.toLowerCase()
+            );
+        }
+        
+        console.log('User ditemukan:', user);
+        
         if (user && user.password === password) {
             return user;
         }
         return null;
     }
 
+    // LEGACY: Fungsi authenticate lama (tetap dipertahankan untuk kompatibilitas)
+    authenticate(username, password) {
+        return this.authenticateUser(username, password);
+    }
+
     // Menampilkan modal ganti kata sandi
     showChangePasswordModal() {
-        // Buat HTML modal
         const modalHTML = `
             <div class="modal-overlay" id="changePasswordModal">
                 <div class="modal-content">
@@ -235,19 +273,15 @@ class AuthSystem {
             </div>
         `;
 
-        // Tambahkan modal ke body
         document.body.insertAdjacentHTML('beforeend', modalHTML);
         
-        // Tampilkan modal
         const modal = document.getElementById('changePasswordModal');
         setTimeout(() => modal.classList.add('active'), 10);
 
-        // Siapkan penangan form
         document.getElementById('changePasswordForm').addEventListener('submit', (e) => {
             this.handleChangePassword(e);
         });
 
-        // Tutup modal saat overlay diklik
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 this.closeChangePasswordModal();
@@ -255,9 +289,89 @@ class AuthSystem {
         });
     }
 
+    // Menampilkan modal ganti username
+    showChangeUsernameModal() {
+        const modalHTML = `
+            <div class="modal-overlay" id="changeUsernameModal">
+                <div class="modal-content">
+                    <button class="modal-close" onclick="window.authSystem.closeChangeUsernameModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="modal-header">
+                        <h3 class="modal-title">Ganti Username</h3>
+                        <p class="modal-subtitle">Perbarui username akun Anda</p>
+                    </div>
+                    <form id="changeUsernameForm">
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" placeholder="Username Saat Ini" id="currentUsername" required>
+                            <div class="input-group-append">
+                                <div class="input-group-text">
+                                    <span class="fas fa-user"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="input-group mb-3">
+                            <input type="password" class="form-control" placeholder="Kata Sandi" id="usernameChangePassword" required>
+                            <div class="input-group-append">
+                                <div class="input-group-text">
+                                    <span class="fas fa-lock"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" placeholder="Username Baru" id="newUsername" required>
+                            <div class="input-group-append">
+                                <div class="input-group-text">
+                                    <span class="fas fa-user-edit"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" placeholder="Konfirmasi Username Baru" id="confirmUsername" required>
+                            <div class="input-group-append">
+                                <div class="input-group-text">
+                                    <span class="fas fa-user-check"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-block">Perbarui Username</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        const modal = document.getElementById('changeUsernameModal');
+        setTimeout(() => modal.classList.add('active'), 10);
+
+        document.getElementById('changeUsernameForm').addEventListener('submit', (e) => {
+            this.handleChangeUsername(e);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.closeChangeUsernameModal();
+            }
+        });
+    }
+
     // Menutup modal ganti kata sandi
     closeChangePasswordModal() {
         const modal = document.getElementById('changePasswordModal');
+        if (modal) {
+            modal.classList.remove('active');
+            setTimeout(() => modal.remove(), 300);
+        }
+    }
+
+    // Menutup modal ganti username
+    closeChangeUsernameModal() {
+        const modal = document.getElementById('changeUsernameModal');
         if (modal) {
             modal.classList.remove('active');
             setTimeout(() => modal.remove(), 300);
@@ -274,7 +388,6 @@ class AuthSystem {
         const confirmPassword = document.getElementById('confirmPassword').value;
         const submitBtn = document.querySelector('#changePasswordForm .btn-primary');
 
-        // Validasi
         if (!username || !currentPassword || !newPassword || !confirmPassword) {
             this.showAlert('error', 'Silakan isi semua bidang.');
             return;
@@ -295,27 +408,33 @@ class AuthSystem {
             return;
         }
 
-        // Tampilkan status loading
         this.setLoadingState(submitBtn, true);
 
         try {
-            // Simulasi penundaan panggilan API
             await this.delay(1000);
 
-            // Verifikasi kredensial saat ini
-            const user = this.authenticate(username, currentPassword);
+            // PERBAIKAN: Reload users dan gunakan authenticateUser
+            this.users = this.loadUsers();
+            const user = this.authenticateUser(username, currentPassword);
             
             if (user) {
-                // Perbarui kata sandi
-                user.password = newPassword;
-                this.saveUsers(); // Simpan pengguna yang diperbarui ke localStorage
+                // Update password di object users dengan key yang benar
+                const userKey = Object.keys(this.users).find(key => 
+                    this.users[key] === user
+                );
                 
-                this.showAlert('success', 'Kata sandi berhasil diperbarui!');
-                
-                // Tutup modal setelah penundaan singkat
-                setTimeout(() => {
-                    this.closeChangePasswordModal();
-                }, 1500);
+                if (userKey) {
+                    this.users[userKey].password = newPassword;
+                    this.saveUsers();
+                    
+                    this.showAlert('success', 'Kata sandi berhasil diperbarui!');
+                    
+                    setTimeout(() => {
+                        this.closeChangePasswordModal();
+                    }, 1500);
+                } else {
+                    this.showAlert('error', 'Terjadi kesalahan saat memperbarui kata sandi.');
+                }
                 
             } else {
                 this.showAlert('error', 'Username atau kata sandi saat ini tidak valid.');
@@ -324,6 +443,116 @@ class AuthSystem {
         } catch (error) {
             this.showAlert('error', 'Gagal memperbarui kata sandi. Silakan coba lagi.');
             console.error('Change password error:', error);
+        } finally {
+            this.setLoadingState(submitBtn, false);
+        }
+    }
+
+    // PERBAIKAN UTAMA: Menangani ganti username dengan sinkronisasi localStorage yang benar
+    async handleChangeUsername(e) {
+        e.preventDefault();
+
+        const currentUsername = document.getElementById('currentUsername').value.trim();
+        const password = document.getElementById('usernameChangePassword').value;
+        const newUsername = document.getElementById('newUsername').value.trim();
+        const confirmUsername = document.getElementById('confirmUsername').value.trim();
+        const submitBtn = document.querySelector('#changeUsernameForm .btn-primary');
+
+        if (!currentUsername || !password || !newUsername || !confirmUsername) {
+            this.showAlert('error', 'Silakan isi semua bidang.');
+            return;
+        }
+
+        if (newUsername !== confirmUsername) {
+            this.showAlert('error', 'Username baru tidak cocok.');
+            return;
+        }
+
+        if (newUsername.length < 3) {
+            this.showAlert('error', 'Username baru harus minimal 3 karakter.');
+            return;
+        }
+
+        if (newUsername === currentUsername) {
+            this.showAlert('error', 'Username baru harus berbeda dari username saat ini.');
+            return;
+        }
+
+        if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) {
+            this.showAlert('error', 'Username hanya boleh mengandung huruf, angka, dan underscore.');
+            return;
+        }
+
+        // PERBAIKAN: Cek apakah username baru sudah ada dengan pencarian yang lebih robust
+        const existingUser = this.users[newUsername.toLowerCase()] || 
+                           Object.values(this.users).find(u => 
+                               u.username.toLowerCase() === newUsername.toLowerCase() ||
+                               (u.displayName && u.displayName.toLowerCase() === newUsername.toLowerCase())
+                           );
+
+        if (existingUser) {
+            this.showAlert('error', 'Username baru sudah digunakan. Pilih username lain.');
+            return;
+        }
+
+        this.setLoadingState(submitBtn, true);
+
+        try {
+            await this.delay(1000);
+
+            // PERBAIKAN: Reload users dan gunakan authenticateUser
+            this.users = this.loadUsers();
+            const user = this.authenticateUser(currentUsername, password);
+            
+            if (user) {
+                // PERBAIKAN: Temukan key lama untuk user ini
+                const oldUserKey = Object.keys(this.users).find(key => 
+                    this.users[key] === user
+                );
+                
+                if (oldUserKey) {
+                    // Buat data user baru dengan username yang diupdate
+                    const newUserData = {
+                        ...user,
+                        username: newUsername.toLowerCase(),
+                        displayName: newUsername
+                    };
+
+                    // PERBAIKAN: Hapus entry lama dan tambah entry baru
+                    delete this.users[oldUserKey];
+                    this.users[newUsername.toLowerCase()] = newUserData;
+                    
+                    // Simpan perubahan ke localStorage
+                    this.saveUsers();
+                    
+                    // PERBAIKAN: Update localStorage session jika user sedang login
+                    const currentLoginUser = localStorage.getItem('currentUserLogin');
+                    if (currentLoginUser === oldUserKey || currentLoginUser === user.username) {
+                        localStorage.setItem('currentUsername', newUsername);
+                        localStorage.setItem('currentUserLogin', newUsername.toLowerCase());
+                        this.currentUser = newUserData; // Update current user object
+                    }
+                    
+                    this.showAlert('success', `Username berhasil diubah dari "${currentUsername}" ke "${newUsername}"!`);
+                    
+                    setTimeout(() => {
+                        this.closeChangeUsernameModal();
+                        // Refresh halaman untuk update UI
+                        if (localStorage.getItem('isLoggedIn') === 'true') {
+                            window.location.reload();
+                        }
+                    }, 1500);
+                } else {
+                    this.showAlert('error', 'Terjadi kesalahan saat memperbarui username.');
+                }
+                
+            } else {
+                this.showAlert('error', 'Username atau kata sandi saat ini tidak valid.');
+            }
+            
+        } catch (error) {
+            this.showAlert('error', 'Gagal memperbarui username. Silakan coba lagi.');
+            console.error('Change username error:', error);
         } finally {
             this.setLoadingState(submitBtn, false);
         }
@@ -338,17 +567,21 @@ class AuthSystem {
         } else {
             button.classList.remove('loading');
             button.disabled = false;
-            if (button.id === 'loginBtn') { // Mengembalikan teks asli untuk tombol login
+            if (button.id === 'loginBtn') {
                 button.innerHTML = 'Login <i class="fas fa-arrow-right"></i>';
-            } else if (button.id === 'registerBtn') { // Mengembalikan teks asli untuk tombol register
+            } else if (button.id === 'registerBtn') {
                 button.innerHTML = 'Daftar <i class="fas fa-user-plus"></i>';
-            } else if (button.textContent.includes('Loading...')) { // Untuk tombol modal ganti kata sandi
-                button.innerHTML = 'Perbarui Kata Sandi';
+            } else if (button.textContent.includes('Loading...')) {
+                if (button.closest('#changePasswordForm')) {
+                    button.innerHTML = 'Perbarui Kata Sandi';
+                } else if (button.closest('#changeUsernameForm')) {
+                    button.innerHTML = 'Perbarui Username';
+                }
             }
         }
     }
 
-    // Menampilkan peringatan menggunakan SweetAlert2 (disukai) atau fallback ke peringatan HTML kustom
+    // Menampilkan peringatan
     showAlert(type, message) {
         if (typeof Swal !== 'undefined') {
             const config = {
@@ -368,7 +601,6 @@ class AuthSystem {
             };
             Swal.fire(config);
         } else {
-            // Fallback ke peringatan HTML kustom jika SweetAlert2 tidak dimuat
             const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
             const alertHtml = `
                 <div class="alert ${alertClass} alert-dismissible fade show animate__animated animate__fadeIn" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 1050; min-width: 250px;">
@@ -386,18 +618,13 @@ class AuthSystem {
 
     // Memeriksa sesi yang ada
     checkExistingSession() {
-        // Dalam aplikasi nyata, ini akan memeriksa token sesi yang valid
-        // Untuk tujuan demo, jika isLoggedIn bernilai true, maka diasumsikan sudah login
         if (localStorage.getItem('isLoggedIn') === 'true') {
-            // Opsional, Anda mungkin ingin mengarahkan ke dashboard segera
-            // jika sesi yang valid ada.
-            // console.log("Sesi ada, mengarahkan ke dashboard...");
-            // window.location.href = 'index.html';
+            // Optional redirect logic
         } else {
             console.log('Pengguna demo yang tersedia:', Object.keys(this.users));
             console.log('Kredensial demo:');
             Object.values(this.users).forEach(user => {
-                console.log(`Username: ${user.username}, Password: ${user.password}`);
+                console.log(`Username: ${user.username}, Password: ${user.password}, Display: ${user.displayName}`);
             });
         }
     }
@@ -420,17 +647,17 @@ class AuthSystem {
     // Fungsionalitas logout
     logout() {
         this.currentUser = null;
-        localStorage.removeItem('isLoggedIn'); // Hapus status login
-        // Dalam aplikasi nyata, ini juga akan menghapus data sesi di server
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('currentUsername');
+        localStorage.removeItem('currentUserLogin');
         console.log('Pengguna telah logout');
         this.showAlert('success', 'Anda telah berhasil logout.');
-        // Mengarahkan ke halaman login setelah penundaan singkat
         setTimeout(() => {
             window.location.href = 'pages/login_page.html';
         }, 1000);
     }
 
-    // Menambahkan pengguna baru (untuk fungsionalitas admin)
+    // Menambahkan pengguna baru
     addUser(userData) {
         if (this.users[userData.username.toLowerCase()]) {
             throw new Error('Username sudah ada.');
@@ -439,6 +666,7 @@ class AuthSystem {
         this.users[userData.username.toLowerCase()] = {
             ...userData,
             username: userData.username.toLowerCase(),
+            displayName: userData.displayName || userData.username,
             createdAt: new Date().toISOString(),
             lastLogin: null
         };
@@ -446,11 +674,11 @@ class AuthSystem {
         return true;
     }
 
-    // Mendapatkan semua pengguna (untuk fungsionalitas admin)
+    // Mendapatkan semua pengguna
     getAllUsers() {
         return Object.values(this.users).map(user => ({
             ...user,
-            password: '***' // Sembunyikan kata sandi dalam daftar
+            password: '***'
         }));
     }
 }
@@ -482,11 +710,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Hanya tampilkan info kredensial demo jika di halaman login
     if (window.location.pathname.includes('login_page.html')) {
         console.log('%cKredensial Login Demo:', 'color: #667eea; font-size: 16px; font-weight: bold;');
         console.log('%cAdmin: username="admin", password="admin123"', 'color: #28a745; font-size: 14px;');
         console.log('%cUser: username="user", password="user123"', 'color: #28a745; font-size: 14px;');
-        console.log('%cGanti Kata Sandi: Klik tautan "Ganti Kata Sandi" di bawah formulir login', 'color: #ffc107; font-size: 14px;');
+        console.log('%cGanti Password: Klik tautan "Ganti Password" di bawah formulir login', 'color: #ffc107; font-size: 14px;');
+        console.log('%cGanti Username: Klik tautan "Ganti Username" di bawah formulir login', 'color: #ffc107; font-size: 14px;');
     }
 });

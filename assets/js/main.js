@@ -185,7 +185,63 @@ class BudgetApp {
     }
     
     showAlert(title, message, type = 'success') {
-        alert(`${title}\n${message}`);
+        switch(type) {
+            case 'success':
+                AlertHandler.success(title, message);
+                break;
+            case 'error':
+                AlertHandler.error(title, message);
+                break;
+            case 'warning':
+                AlertHandler.warning(title, message);
+                break;
+            default:
+                AlertHandler.info(title, message);
+        }
+    }
+
+    deleteIncome(id) {
+        AlertHandler.confirm('Konfirmasi', 'Apakah Anda yakin ingin menghapus data pemasukkan ini?', () => {
+            this.data.income = this.data.income.filter(item => item.id !== id);
+            this.saveData();
+            this.renderIncomeTable();
+            this.updateDashboard();
+            this.updateChart();
+            AlertHandler.success('Berhasil!', 'Data pemasukkan berhasil dihapus!');
+        });
+    }
+
+    deleteBudget(id) {
+        AlertHandler.confirm('Konfirmasi', 'Apakah Anda yakin ingin menghapus alokasi budget ini? Ini juga akan menghapus semua data pengeluaran yang terkait.', () => {
+            this.data.expense = this.data.expense.filter(exp => exp.budgetAllocationId !== id);
+            this.data.budget = this.data.budget.filter(item => item.id !== id);
+            this.saveData();
+            this.renderBudgetTable();
+            this.renderExpenseTable();
+            this.updateDashboard();
+            this.updateChart();
+            AlertHandler.success('Berhasil!', 'Alokasi budget berhasil dihapus!');
+        });
+    }
+
+    deleteExpense(id) {
+        AlertHandler.confirm('Konfirmasi', 'Apakah Anda yakin ingin menghapus data pengeluaran ini?', () => {
+            const expense = this.data.expense.find(item => item.id === id);
+            if (expense) {
+                const budget = this.data.budget.find(b => b.id === expense.budgetAllocationId);
+                if (budget) {
+                    budget.spent -= expense.amount;
+                }
+            }
+            
+            this.data.expense = this.data.expense.filter(item => item.id !== id);
+            this.saveData();
+            this.renderExpenseTable();
+            this.renderBudgetTable();
+            this.updateDashboard();
+            this.updateChart();
+            AlertHandler.success('Berhasil!', 'Data pengeluaran berhasil dihapus!');
+        });
     }
 
     closeModal(modalId) {
@@ -265,17 +321,6 @@ class BudgetApp {
         modal.classList.add('active');
     }
 
-    deleteIncome(id) {
-        if (confirm('Apakah Anda yakin ingin menghapus data pemasukkan ini?')) {
-            this.data.income = this.data.income.filter(item => item.id !== id);
-            this.saveData();
-            this.renderIncomeTable();
-            this.updateDashboard();
-            this.updateChart();
-            this.showAlert('Berhasil!', 'Data pemasukkan berhasil dihapus!', 'success');
-        }
-    }
-
     renderIncomeTable() {
         const tbody = document.getElementById('incomeTableBody');
         tbody.innerHTML = '';
@@ -347,20 +392,6 @@ class BudgetApp {
         }
         
         modal.classList.add('active');
-    }
-
-    deleteBudget(id) {
-        if (confirm('Apakah Anda yakin ingin menghapus alokasi budget ini? Ini juga akan menghapus semua data pengeluaran yang terkait.')) {
-            // Hapus juga pengeluaran yang terkait dengan budget ini
-            this.data.expense = this.data.expense.filter(exp => exp.budgetAllocationId !== id);
-            this.data.budget = this.data.budget.filter(item => item.id !== id);
-            this.saveData();
-            this.renderBudgetTable();
-            this.renderExpenseTable();
-            this.updateDashboard();
-            this.updateChart();
-            this.showAlert('Berhasil!', 'Alokasi budget berhasil dihapus!', 'success');
-        }
     }
 
     renderBudgetTable() {
@@ -466,26 +497,6 @@ class BudgetApp {
         }
         
         modal.classList.add('active');
-    }
-
-    deleteExpense(id) {
-        if (confirm('Apakah Anda yakin ingin menghapus data pengeluaran ini?')) {
-            const expense = this.data.expense.find(item => item.id === id);
-            if (expense) {
-                const budget = this.data.budget.find(b => b.id === expense.budgetAllocationId);
-                if (budget) {
-                    budget.spent -= expense.amount;
-                }
-            }
-            
-            this.data.expense = this.data.expense.filter(item => item.id !== id);
-            this.saveData();
-            this.renderExpenseTable();
-            this.renderBudgetTable();
-            this.updateDashboard();
-            this.updateChart();
-            this.showAlert('Berhasil!', 'Data pengeluaran berhasil dihapus!', 'success');
-        }
     }
 
     renderExpenseTable() {
